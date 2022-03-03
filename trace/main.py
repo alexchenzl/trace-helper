@@ -23,7 +23,7 @@ def trace_tx(provider: HTTPProvider, tx_hash, tracer, timeout=10):
     return provider.make_request('debug_traceTransaction', params)
 
 
-def trace_block(provider: HTTPProvider, block_num, tracer, timeout=5):
+def trace_block(provider: HTTPProvider, block_num, tracer, timeout=10):
     params = [block_num, {
         'disableStack': True,
         'disableMemory': True,
@@ -37,6 +37,7 @@ def trace_block(provider: HTTPProvider, block_num, tracer, timeout=5):
 
 def fetch_block(provider: HTTPProvider, block_num):
     w3 = Web3(provider)
+    w3.toWei
     return w3.eth.get_block(block_num)
 
 
@@ -72,16 +73,22 @@ def extract_access_list(hash, resp):
             'type': resp['result']['type'],
             'h': hash,
             'tt': resp['result']['tt'],
-            'ta': len(resp['result']['acl'])
+            'ta': len(resp['result']['acl']),
+            'tmp': resp['result']['tmp'],
         }
 
         a = []
         s = []
         ts = 0
         for address, slots in resp['result']['acl'].items():
+            address = formalize_address(address)
             a.append(address)
             if len(slots) > 0:
-                slots2 = {'address': address, 'storageKeys': list(slots.keys())}
+                keys = []
+                for k in slots.keys():
+                    keys.append(formalize_slot_key(k))
+
+                slots2 = {'address': address, 'storageKeys': keys}
                 ts = ts + len(slots2['storageKeys'])
                 s.append(slots2)
 
@@ -108,15 +115,26 @@ def extract_block_access_list(block, resp):
     return results
 
 
-parser = argparse.ArgumentParser(description='Trace helper')
-parser.add_argument('--rpc', '-r', help='RPC server url, required', required=True)
-parser.add_argument('--tx', help='transaction hash or block number, required', required=True)
-parser.add_argument('--tracer', '-t', help='tracer name, default is ac_tracer', default='ac_tracer')
-parser.add_argument('--timeout', '-T', help='tracer timeout, in seconds', default=5)
-parser.add_argument('--out', '-o',
-                    help='tracer output file name prefix, tx and .json will be appended as the full name')
+def formalize_address(address):
+    if not address.startswith('0x'):
+        return '0x' + address
+    else:
+        return address
 
-if __name__ == '__main__':
+
+def formalize_slot_key(slot_key):
+    value = int(slot_key, 16)
+    return "{0:#0{1}x}".format(value, 66)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Trace helper')
+    parser.add_argument('--rpc', '-r', help='RPC server url, required', required=True)
+    parser.add_argument('--tx', help='transaction hash or block number, required', required=True)
+    parser.add_argument('--tracer', '-t', help='tracer name, default is ac_tracer', default='ac_tracer')
+    parser.add_argument('--timeout', '-T', help='tracer timeout, in seconds', default=5)
+    parser.add_argument('--out', '-o',
+                        help='tracer output file name prefix, tx and .json will be appended as the full name')
 
     args = parser.parse_args()
 
@@ -158,3 +176,7 @@ if __name__ == '__main__':
 
     delta = end_time - start_time
     print("\nTrace {0} time {1}s".format(tx, delta.total_seconds()))
+
+
+if __name__ == '__main__':
+    main()
