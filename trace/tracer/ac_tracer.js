@@ -3,6 +3,7 @@ var temp = {
     steps: 0,
     acList: {},
     touches: 0,
+    jumpis: 0,
     tmp: [],
     formalizeAddress: function (address) {
         // this.tmp.push(address)
@@ -33,17 +34,19 @@ var temp = {
         from = toHex(ctx['from'])
         this.addAddress(from)
         if (ctx['to']) {
+            // For create, this is the new created contract address
             this.addAddress(toHex(ctx['to']))
-        } else {
-            // create contract
+        }
+        // Even for simple transfer, ctx['type'] == 'CALL'
+        if (ctx['type'] == 'CREATE') {
             this.type = 2
         }
-
         return {
             type: this.type,
+            jumpis: this.jumpis,
             tt: this.touches,
             acl: this.acList,
-            tmp: this.tmp
+            st: ctx['time']
         }
     },
     fault: function (log, db) {
@@ -77,10 +80,12 @@ var temp = {
                 break;
             case "SLOAD":
                 // case "SSTORE":
-                // this address has 0x prefix
-                this.addSlot(toHex(log.contract.getAddress()), log.stack.peek(1).toString(16))
+                // this address has 0x prefix, but slot has no 0x prefix
+                this.addSlot(toHex(log.contract.getAddress()), log.stack.peek(0).toString(16))
                 this.touches = this.touches + 1;
                 break;
+            case "JUMPI":
+                this.jumpis = this.jumpis + 1;
         }
         this.steps++;
     }

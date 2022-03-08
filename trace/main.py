@@ -23,7 +23,7 @@ def trace_tx(provider: HTTPProvider, tx_hash, tracer, timeout=10):
     return provider.make_request('debug_traceTransaction', params)
 
 
-def trace_block(provider: HTTPProvider, block_num, tracer, timeout=10):
+def trace_block(provider: HTTPProvider, block_num, tracer, timeout=30):
     params = [block_num, {
         'disableStack': True,
         'disableMemory': True,
@@ -70,18 +70,19 @@ def print_opcodes(opcodes, tabs=""):
 def extract_access_list(hash, resp):
     if "result" in resp:
         record = {
-            'type': resp['result']['type'],
             'h': hash,
+            'type': resp['result']['type'],
+            'jumpis': resp['result']['jumpis'],
+            'st': resp['result']['st'],
             'tt': resp['result']['tt'],
             'ta': len(resp['result']['acl']),
-            'tmp': resp['result']['tmp'],
+
         }
 
         a = []
         s = []
         ts = 0
         for address, slots in resp['result']['acl'].items():
-            address = formalize_address(address)
             a.append(address)
             if len(slots) > 0:
                 keys = []
@@ -115,13 +116,6 @@ def extract_block_access_list(block, resp):
     return results
 
 
-def formalize_address(address):
-    if not address.startswith('0x'):
-        return '0x' + address
-    else:
-        return address
-
-
 def formalize_slot_key(slot_key):
     value = int(slot_key, 16)
     return "{0:#0{1}x}".format(value, 66)
@@ -140,7 +134,7 @@ def main():
 
     tracer_name = args.tracer
     tracer = load_tracer(tracer_name)
-    http_provider = HTTPProvider(args.rpc)
+    http_provider = HTTPProvider(args.rpc, {'timeout': 30})
 
     block = None
     tx = args.tx

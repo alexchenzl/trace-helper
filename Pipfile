@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 web3 = "*"
+psycopg2 = "*"
 
 
 [dev-packages]
