@@ -186,7 +186,7 @@ var temp = {
             frame["error"] = error;
         } else if (log.getDepth() == this.stack.length) {
             opinfo = {
-                pc: log.getPC().toString(16),
+                pc: log.getPC(),
                 op: log.op.toString(),
                 opn: log.op.toNumber(),
                 step: this.steps,
